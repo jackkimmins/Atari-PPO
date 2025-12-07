@@ -13,7 +13,7 @@ from config import DEVICE, EVAL_RENDER, EVAL_DELAY
 from model import AtariCNN
 from env_utils import make_single_env
 
-FULLY_TRAINED_DIR = "fully_trained"
+FULLY_TRAINED_DIR = "fully_trained_models"
 
 def get_available_models():
     pattern = os.path.join(FULLY_TRAINED_DIR, "*.pt")
