@@ -1,0 +1,2 @@
+# Atari Games w/ Proximal Policy Optimisation
+This repository contains code and resources for training reinforcement learning agents to play Atari games using the Proximal Policy Optimisation (PPO) algorithm.  Designed for educational purposes, it provides a hands-on approach to understanding RL concepts and techniques.
