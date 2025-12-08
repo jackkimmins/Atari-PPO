@@ -10,7 +10,14 @@ os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
 import subprocess
 import webbrowser
 import socket
-import msvcrt
+import select
+
+# Cross-platform keyboard input
+if sys.platform == 'win32':
+    import msvcrt
+else:
+    import tty
+    import termios
 
 import torch
 import torch.nn as nn
@@ -408,10 +415,17 @@ def train():
                 'mean_return': mean_ret,
             }, MODEL_PATH)
         
-        # Check for keyboard input
-        if msvcrt.kbhit():
-            key = msvcrt.getch().decode('utf-8', errors='ignore').lower()
-            if key == 'd':
+        # Check for keyboard input (cross-platform)
+        key_pressed = None
+        if sys.platform == 'win32':
+            if msvcrt.kbhit():
+                key_pressed = msvcrt.getch().decode('utf-8', errors='ignore').lower()
+        else:
+            # Linux/macOS: use select to check for input
+            if select.select([sys.stdin], [], [], 0)[0]:
+                key_pressed = sys.stdin.read(1).lower()
+        
+        if key_pressed == 'd':
                 pbar.write(f"\n{'='*50}")
                 pbar.write(f"Demo time! Watching the agent play...")
                 pbar.write(f"{'='*50}")
