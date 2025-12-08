@@ -204,6 +204,9 @@ def train():
         model = nn.DataParallel(model)
         print(f"Model wrapped in DataParallel across {num_gpus} GPUs")
     
+    # Reference to underlying model for custom methods (handles DataParallel)
+    base_model = model.module if use_multi_gpu else model
+    
     optimiser = optim.Adam(model.parameters(), lr=LEARNING_RATE, eps=1e-5)
     
     num_updates = TOTAL_TIMESTEPS // BATCH_SIZE
@@ -291,7 +294,7 @@ def train():
             done_buf[step] = done
             
             with torch.no_grad():
-                action, logprob, _, value = model.get_action_and_value(obs)
+                action, logprob, _, value = base_model.get_action_and_value(obs)
             
             action_buf[step] = action
             logprob_buf[step] = logprob
@@ -312,7 +315,7 @@ def train():
         
         # Bootstrap final value
         with torch.no_grad():
-            next_value = model.get_value(obs)
+            next_value = base_model.get_value(obs)
         
         # Compute advantages
         advantages, returns = compute_gae(reward_buf, value_buf, done_buf, next_value)
@@ -338,7 +341,7 @@ def train():
             for start in range(0, BATCH_SIZE, MINIBATCH_SIZE):
                 mb_idx = indices[start:start + MINIBATCH_SIZE]
                 
-                _, new_logprob, entropy, new_value = model.get_action_and_value(b_obs[mb_idx], b_actions[mb_idx])
+                _, new_logprob, entropy, new_value = base_model.get_action_and_value(b_obs[mb_idx], b_actions[mb_idx])
                 
                 # Policy loss
                 ratio = (new_logprob - b_logprobs[mb_idx]).exp()
