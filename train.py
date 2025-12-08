@@ -47,8 +47,10 @@ def compute_gae(rewards, values, dones, next_value):
 
 
 def save_checkpoint(model, optimiser, update, global_step, episode_returns, best_mean_return, tb_history):
+    # Handle DataParallel wrapper - save the underlying model
+    model_state = model.module.state_dict() if hasattr(model, 'module') else model.state_dict()
     torch.save({
-        'model_state_dict': model.state_dict(),
+        'model_state_dict': model_state,
         'optimiser_state_dict': optimiser.state_dict(),
         'update': update,
         'global_step': global_step,
@@ -65,7 +67,12 @@ def load_checkpoint(model, optimiser):
     print("Resuming from checkpoint...")
     checkpoint = torch.load(CHECKPOINT_PATH, map_location=DEVICE, weights_only=False)
     
-    model.load_state_dict(checkpoint['model_state_dict'])
+    # Handle loading into DataParallel wrapped model
+    # Checkpoints are always saved without 'module.' prefix
+    if hasattr(model, 'module'):
+        model.module.load_state_dict(checkpoint['model_state_dict'])
+    else:
+        model.load_state_dict(checkpoint['model_state_dict'])
     optimiser.load_state_dict(checkpoint['optimiser_state_dict'])
     
     start_update = checkpoint['update'] + 1
@@ -165,8 +172,16 @@ def run_demo(model, num_actions):
 
 def train():
     print(f"Device: {DEVICE}")
+    num_gpus = torch.cuda.device_count()
+    use_multi_gpu = num_gpus > 1
+    
     if torch.cuda.is_available():
-        print(f"GPU: {torch.cuda.get_device_name(0)}")
+        if use_multi_gpu:
+            print(f"Multi-GPU Training Enabled: {num_gpus} GPUs detected")
+            for i in range(num_gpus):
+                print(f"  GPU {i}: {torch.cuda.get_device_name(i)}")
+        else:
+            print(f"GPU: {torch.cuda.get_device_name(0)}")
     
     # Set up environments
     envs = make_vec_envs(NUM_ENVS, training=True)
@@ -176,6 +191,12 @@ def train():
     
     # Create model and optimiser
     model = AtariCNN(num_actions).to(DEVICE)
+    
+    # Wrap model in DataParallel if multiple GPUs available
+    if use_multi_gpu:
+        model = nn.DataParallel(model)
+        print(f"Model wrapped in DataParallel across {num_gpus} GPUs")
+    
     optimiser = optim.Adam(model.parameters(), lr=LEARNING_RATE, eps=1e-5)
     
     num_updates = TOTAL_TIMESTEPS // BATCH_SIZE
@@ -378,8 +399,10 @@ def train():
         # Save checkpoint
         if update % SAVE_INTERVAL == 0:
             save_checkpoint(model, optimiser, update, global_step, episode_returns, best_mean_return, tb_history)
+            # Handle DataParallel wrapper - save the underlying model
+            model_state = model.module.state_dict() if hasattr(model, 'module') else model.state_dict()
             torch.save({
-                'model_state_dict': model.state_dict(),
+                'model_state_dict': model_state,
                 'update': update,
                 'global_step': global_step,
                 'mean_return': mean_ret,
@@ -394,7 +417,9 @@ def train():
                 pbar.write(f"{'='*50}")
                 
                 model.eval()
-                demo_score = run_demo(model, num_actions)
+                # Use underlying model for demo (runs on single GPU)
+                demo_model = model.module if hasattr(model, 'module') else model
+                demo_score = run_demo(demo_model, num_actions)
                 pbar.write(f"Demo score: {demo_score:.0f}")
                 pbar.write(f"{'='*50}\n")
     
@@ -403,8 +428,10 @@ def train():
     
     # Final save
     mean_ret = np.mean(episode_returns[-100:]) if episode_returns else 0
+    # Handle DataParallel wrapper - save the underlying model
+    model_state = model.module.state_dict() if hasattr(model, 'module') else model.state_dict()
     torch.save({
-        'model_state_dict': model.state_dict(),
+        'model_state_dict': model_state,
         'update': num_updates,
         'global_step': global_step,
         'mean_return': mean_ret,

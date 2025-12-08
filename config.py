@@ -10,7 +10,7 @@ import torch
 # ALE/Seaquest-v5 - Seaquest
 
 # Environment
-ENV_NAME = "ALE/MsPacman-v5"
+ENV_NAME = "ALE/Tetris-v5"
 FRAME_STACK = 4
 FRAME_SKIP = 4
 RESIZE_SHAPE = (84, 84)
