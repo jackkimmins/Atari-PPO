@@ -54,6 +54,9 @@ def compute_gae(rewards, values, dones, next_value):
 
 
 def save_checkpoint(model, optimiser, update, global_step, episode_returns, best_mean_return, tb_history):
+    # Ensure models directory exists
+    os.makedirs(os.path.dirname(CHECKPOINT_PATH), exist_ok=True)
+    
     # Handle DataParallel wrapper - save the underlying model
     model_state = model.module.state_dict() if hasattr(model, 'module') else model.state_dict()
     torch.save({
