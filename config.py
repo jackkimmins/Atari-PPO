@@ -10,14 +10,14 @@ import torch
 # ALE/Seaquest-v5 - Seaquest
 
 # Environment
-ENV_NAME = "ALE/MsPacman-v5"
+ENV_NAME = "ALE/Breakout-v5"
 FRAME_STACK = 4
 FRAME_SKIP = 4
 RESIZE_SHAPE = (84, 84)
 STICKY_ACTION_PROB = 0.25
 
 # Training hyperparameters
-TOTAL_TIMESTEPS = 250_000_000
+TOTAL_TIMESTEPS = 500_000_000
 NUM_ENVS = 16
 NUM_STEPS = 128
 BATCH_SIZE = NUM_ENVS * NUM_STEPS
