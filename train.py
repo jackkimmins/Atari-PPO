@@ -11,13 +11,7 @@ import subprocess
 import webbrowser
 import socket
 import select
-
-# Cross-platform keyboard input
-if sys.platform == 'win32':
-    import msvcrt
-else:
-    import tty
-    import termios
+import msvcrt
 
 import torch
 import torch.nn as nn
@@ -36,7 +30,7 @@ from config import (
 from model import AtariCNN
 from env_utils import make_vec_envs, make_single_env
 
-# Generalised Advantage Estimation (Looks ahead multiple steps to get a better estimate of advantage)
+# Generalised Advantage Estimation
 def compute_gae(rewards, values, dones, next_value):
     num_steps = len(rewards)
     advantages = torch.zeros_like(rewards)
@@ -54,10 +48,8 @@ def compute_gae(rewards, values, dones, next_value):
 
 
 def save_checkpoint(model, optimiser, update, global_step, episode_returns, best_mean_return, tb_history):
-    # Ensure models directory exists
     os.makedirs(os.path.dirname(CHECKPOINT_PATH), exist_ok=True)
     
-    # Handle DataParallel wrapper - save the underlying model
     model_state = model.module.state_dict() if hasattr(model, 'module') else model.state_dict()
     torch.save({
         'model_state_dict': model_state,
@@ -77,8 +69,6 @@ def load_checkpoint(model, optimiser):
     print("Resuming from checkpoint...")
     checkpoint = torch.load(CHECKPOINT_PATH, map_location=DEVICE, weights_only=False)
     
-    # Handle loading into DataParallel wrapped model
-    # Checkpoints are always saved without 'module.' prefix
     if hasattr(model, 'module'):
         model.module.load_state_dict(checkpoint['model_state_dict'])
     else:
@@ -110,7 +100,7 @@ def kill_tensorboard():
     except Exception:
         pass
 
-# Start TensorBoard
+# TensorBoard
 def start_tensorboard(logdir, port=6006, restart=False):
     if restart:
         kill_tensorboard()
@@ -132,8 +122,8 @@ def start_tensorboard(logdir, port=6006, restart=False):
     webbrowser.open(url)
 
 
+# Format simulated time as days:hours:minutes:seconds.
 def format_sim_time(seconds):
-    """Format simulated time as days:hours:minutes:seconds."""
     days = int(seconds // 86400)
     hours = int((seconds % 86400) // 3600)
     minutes = int((seconds % 3600) // 60)
